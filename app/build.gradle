@@ -3,9 +3,16 @@ import java.util.regex.Pattern
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        Release {
+            keyAlias KeyAlias
+            keyPassword KeyPassword
+            storeFile file(KeyStorePath)
+            storePassword KeyStorePassword
+        }
+    }
     compileSdkVersion 23
     buildToolsVersion "23.0.3"
-
     defaultConfig {
         applicationId "com.iahvector.pinpoint"
         minSdkVersion 16
@@ -17,13 +24,13 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            manifestPlaceholders = [ GOOGLE_MAPS_API_KEY:GoogleMapsReleaseApiKey]
+            manifestPlaceholders = [GOOGLE_MAPS_API_KEY: GoogleMapsReleaseApiKey]
+            signingConfig signingConfigs.Release
         }
-
         debug {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            manifestPlaceholders = [ GOOGLE_MAPS_API_KEY:GoogleMapsDebugApiKey]
+            manifestPlaceholders = [GOOGLE_MAPS_API_KEY: GoogleMapsDebugApiKey]
         }
     }
 }
