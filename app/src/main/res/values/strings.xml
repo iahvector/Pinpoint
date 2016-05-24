@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Pinpoint</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="permissionNeeded">Permission needed</string>
+    <string name="locationPermissionRationale">Location access permission is needed to display your location on the map.</string>
+    <string name="cannotDisplayUserLocation">Cannot display your location without Location permission</string>
 </resources>
