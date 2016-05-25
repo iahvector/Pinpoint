@@ -1,6 +1,8 @@
 package com.iahvector.pinpoint;
 
 import android.Manifest;
+import android.content.Intent;
+import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -30,16 +32,20 @@ public class MapActivity
         implements OnMapReadyCallback,
                    GoogleApiClient.ConnectionCallbacks,
                    GoogleApiClient.OnConnectionFailedListener,
-                   ConfirmationDialogFragment.ConfirmationDialogListener {
+                   ConfirmationDialogFragment.ConfirmationDialogListener,
+                   GoogleApiErrorDialogFragment.GoogleApiErrorDialogListener {
 
-    private final static int ENABLE_MY_LOCATION_REQUEST_CODE = 0;
-    private final static int ANIMATE_TO_MY_LOCATION_REQUEST_CODE = 1;
-    private final static int LOCATION_PERMISSION_REQUEST_CODE = 0;
-    private final static String CONFIRMATION_DIALOG_TAG = "confirmation-dialog-tag";
+    private final static int RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE = 0;
+    private final static int LOCATION_PERMISSION_REQUEST_CODE = 10;
+    private final static int ENABLE_MY_LOCATION_REQUEST_CODE = 11;
+    private final static int ANIMATE_TO_MY_LOCATION_REQUEST_CODE = 12;
+    private final static String CONFIRMATION_DIALOG_TAG = "confirmation";
+    private final static String GOOGLE_API_ERROR_DIALOG_TAG = "google-api-error";
 
     private GoogleApiClient googleApiClient;
     private GoogleMap map;
 
+    private boolean isResolvingGoogleApiError;
     private boolean isDisplayingConfirmationDialog;
     private ArrayList<Integer> pendingLocationActions;
 
@@ -48,6 +54,7 @@ public class MapActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
 
+        isResolvingGoogleApiError = false;
         isDisplayingConfirmationDialog = false;
         pendingLocationActions = new ArrayList<>();
 
@@ -99,6 +106,24 @@ public class MapActivity
                     }
                     pendingLocationActions.clear();
                 }
+                break;
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE: {
+                isResolvingGoogleApiError = false;
+
+                if (resultCode == RESULT_OK) {
+                    // Make sure the app is not already connected or attempting to connect
+                    if (!googleApiClient.isConnecting() && !googleApiClient.isConnected()) {
+                        googleApiClient.connect();
+                    }
+                }
+
                 break;
             }
         }
@@ -183,7 +208,39 @@ public class MapActivity
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        if (!isResolvingGoogleApiError) {
+            if (connectionResult.hasResolution()) {
+                try {
+                    connectionResult.startResolutionForResult(
+                            this,
+                            RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE);
+                    isResolvingGoogleApiError = true;
+                } catch (IntentSender.SendIntentException e) {
+                    e.printStackTrace();
+                    googleApiClient.connect();
+                }
+            } else {
+                isResolvingGoogleApiError = true;
 
+                GoogleApiErrorDialogFragment googleApiErrorDialogFragment =
+                        (GoogleApiErrorDialogFragment) getSupportFragmentManager()
+                                .findFragmentByTag(GOOGLE_API_ERROR_DIALOG_TAG);
+
+                if (googleApiErrorDialogFragment == null) {
+                    googleApiErrorDialogFragment = new GoogleApiErrorDialogFragment();
+                }
+
+                Bundle b = new Bundle();
+                b.putInt(GoogleApiErrorDialogFragment.PARAM_ERROR_CODE, connectionResult
+                        .getErrorCode());
+                b.putInt(GoogleApiErrorDialogFragment.PARAM_REQUEST_CODE,
+                         RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE);
+
+                googleApiErrorDialogFragment.setArguments(b);
+                googleApiErrorDialogFragment.show(getSupportFragmentManager(),
+                                                  GOOGLE_API_ERROR_DIALOG_TAG);
+            }
+        }
     }
 
     @Override
@@ -199,5 +256,10 @@ public class MapActivity
 
         Snackbar.make(findViewById(R.id.mapActivityRoot), R.string.cannotDisplayUserLocation,
                       Snackbar.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onDismissed() {
+        isResolvingGoogleApiError = false;
     }
 }
