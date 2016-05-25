@@ -17,6 +17,8 @@ import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -26,7 +28,6 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class MapActivity
         extends AppCompatActivity
@@ -34,7 +35,8 @@ public class MapActivity
                    GoogleApiClient.ConnectionCallbacks,
                    GoogleApiClient.OnConnectionFailedListener,
                    ConfirmationDialogFragment.ConfirmationDialogListener,
-                   GoogleApiErrorDialogFragment.GoogleApiErrorDialogListener {
+                   GoogleApiErrorDialogFragment.GoogleApiErrorDialogListener,
+                   LocationListener {
 
     private final static int RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE = 0;
     private final static int LOCATION_PERMISSION_REQUEST_CODE = 10;
@@ -46,8 +48,10 @@ public class MapActivity
 
     private GoogleApiClient googleApiClient;
     private GoogleMap map;
+    private Location lastLocation;
 
     private boolean isResolvingGoogleApiError;
+    private boolean isLocationUpdatesRequested;
     private boolean isDisplayingConfirmationDialog;
     private ArrayList<Integer> pendingLocationActions;
 
@@ -56,6 +60,7 @@ public class MapActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
 
+        isLocationUpdatesRequested = false;
         isResolvingGoogleApiError = savedInstanceState != null
                 && savedInstanceState.getBoolean(PARAM_RESOLVING_GOOGLE_API_ERROR, false);
         ;
@@ -83,6 +88,18 @@ public class MapActivity
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        requestLocationUpdates();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopLocationUpdates();
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
         googleApiClient.disconnect();
@@ -101,6 +118,7 @@ public class MapActivity
             case LOCATION_PERMISSION_REQUEST_CODE: {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager
                         .PERMISSION_GRANTED) {
+                    requestLocationUpdates();
                     for (int action : pendingLocationActions) {
                         switch (action) {
                             case ENABLE_MY_LOCATION_REQUEST_CODE: {
@@ -185,10 +203,34 @@ public class MapActivity
         }
     }
 
+    private void requestLocationUpdates() {
+        if (!isLocationUpdatesRequested && googleApiClient.isConnected()
+                && (ActivityCompat.checkSelfPermission(this, Manifest.permission
+                .ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission
+                        .ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
+            LocationRequest locationRequest = new LocationRequest();
+            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            locationRequest.setInterval(10000);
+
+            LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient,
+                                                                     locationRequest,
+                                                                     this);
+            isLocationUpdatesRequested = true;
+        }
+    }
+
+    private void stopLocationUpdates() {
+        if (googleApiClient.isConnected() && isLocationUpdatesRequested) {
+            LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, this);
+            isLocationUpdatesRequested = false;
+        }
+    }
+
     private void animateToCurrentLocation() {
         if (map != null) {
             //noinspection MissingPermission
-            Location lastLocation = LocationServices.FusedLocationApi.getLastLocation
+            lastLocation = LocationServices.FusedLocationApi.getLastLocation
                     (googleApiClient);
             if (lastLocation != null) {
                 CameraUpdate u = CameraUpdateFactory.newLatLngZoom(
@@ -209,6 +251,7 @@ public class MapActivity
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         requestLocationAction(ANIMATE_TO_MY_LOCATION_REQUEST_CODE, true);
+        requestLocationUpdates();
     }
 
     @Override
@@ -271,5 +314,10 @@ public class MapActivity
     @Override
     public void onDismissed() {
         isResolvingGoogleApiError = false;
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        lastLocation = location;
     }
 }
