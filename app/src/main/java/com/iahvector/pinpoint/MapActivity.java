@@ -6,6 +6,7 @@ import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
@@ -41,6 +42,7 @@ public class MapActivity
     private final static int ANIMATE_TO_MY_LOCATION_REQUEST_CODE = 12;
     private final static String CONFIRMATION_DIALOG_TAG = "confirmation";
     private final static String GOOGLE_API_ERROR_DIALOG_TAG = "google-api-error";
+    private final static String PARAM_RESOLVING_GOOGLE_API_ERROR = "resolving-google-api-error";
 
     private GoogleApiClient googleApiClient;
     private GoogleMap map;
@@ -54,7 +56,9 @@ public class MapActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
 
-        isResolvingGoogleApiError = false;
+        isResolvingGoogleApiError = savedInstanceState != null
+                && savedInstanceState.getBoolean(PARAM_RESOLVING_GOOGLE_API_ERROR, false);
+        ;
         isDisplayingConfirmationDialog = false;
         pendingLocationActions = new ArrayList<>();
 
@@ -82,6 +86,12 @@ public class MapActivity
     protected void onStop() {
         super.onStop();
         googleApiClient.disconnect();
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
+        super.onSaveInstanceState(outState, outPersistentState);
+        outState.putBoolean(PARAM_RESOLVING_GOOGLE_API_ERROR, isResolvingGoogleApiError);
     }
 
     @Override
@@ -231,8 +241,8 @@ public class MapActivity
                 }
 
                 Bundle b = new Bundle();
-                b.putInt(GoogleApiErrorDialogFragment.PARAM_ERROR_CODE, connectionResult
-                        .getErrorCode());
+                b.putInt(GoogleApiErrorDialogFragment.PARAM_ERROR_CODE,
+                         connectionResult.getErrorCode());
                 b.putInt(GoogleApiErrorDialogFragment.PARAM_REQUEST_CODE,
                          RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE);
 
