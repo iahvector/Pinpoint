@@ -14,7 +14,8 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
+import android.support.v7.widget.Toolbar;
+import android.view.Menu;
 import android.view.View;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -48,14 +49,14 @@ public class MapActivity
     private final static String GOOGLE_API_ERROR_DIALOG_TAG = "google-api-error";
     private final static String PARAM_RESOLVING_GOOGLE_API_ERROR = "resolving-google-api-error";
 
-    private GoogleApiClient googleApiClient;
-    private GoogleMap map;
-    private Location lastLocation;
-
     private boolean isResolvingGoogleApiError;
     private boolean isLocationUpdatesRequested;
     private boolean isDisplayingConfirmationDialog;
     private ArrayList<Integer> pendingLocationActions;
+
+    private GoogleApiClient googleApiClient;
+    private GoogleMap map;
+    private Location lastLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +66,7 @@ public class MapActivity
         isLocationUpdatesRequested = false;
         isResolvingGoogleApiError = savedInstanceState != null
                 && savedInstanceState.getBoolean(PARAM_RESOLVING_GOOGLE_API_ERROR, false);
-        ;
+
         isDisplayingConfirmationDialog = false;
         pendingLocationActions = new ArrayList<>();
 
@@ -77,6 +78,10 @@ public class MapActivity
                     .addApi(LocationServices.API)
                     .build();
         }
+
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle(R.string.app_name);
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -119,6 +124,12 @@ public class MapActivity
     public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
         super.onSaveInstanceState(outState, outPersistentState);
         outState.putBoolean(PARAM_RESOLVING_GOOGLE_API_ERROR, isResolvingGoogleApiError);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.map_activity_menu, menu);
+        return true;
     }
 
     @Override
@@ -253,6 +264,7 @@ public class MapActivity
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
+        map.setPadding(0,getSupportActionBar().getHeight(),0,0);
         map.getUiSettings().setMyLocationButtonEnabled(false);
         requestLocationAction(ENABLE_MY_LOCATION_REQUEST_CODE, true);
         requestLocationAction(ANIMATE_TO_MY_LOCATION_REQUEST_CODE, true);

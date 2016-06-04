@@ -5,4 +5,7 @@
     <string name="permissionNeeded">Permission needed</string>
     <string name="locationPermissionRationale">Location access permission is needed to display your location on the map.</string>
     <string name="cannotDisplayUserLocation">Cannot display your location without Location permission</string>
+    <string name="search">Search</string>
+    <string name="settings">Settings</string>
+    <string name="myLocation">My location</string>
 </resources>
