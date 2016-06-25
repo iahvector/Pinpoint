@@ -45,7 +45,8 @@ public class MapActivity
                    GoogleApiErrorDialogFragment.GoogleApiErrorDialogListener,
                    LocationListener,
                    GoogleMap.OnMapLongClickListener,
-                   GoogleMap.OnCameraChangeListener {
+                   GoogleMap.OnCameraChangeListener,
+                   GoogleMap.OnMapClickListener {
 
     private final static int RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE = 0;
     private final static int LOCATION_PERMISSION_REQUEST_CODE = 10;
@@ -275,6 +276,7 @@ public class MapActivity
         map.setPadding(0, getSupportActionBar().getHeight(), 0, 0);
         map.getUiSettings().setMyLocationButtonEnabled(false);
         map.setOnMapLongClickListener(this);
+        map.setOnMapClickListener(this);
         map.setOnCameraChangeListener(this);
         requestLocationAction(ENABLE_MY_LOCATION_REQUEST_CODE, true);
 
@@ -372,5 +374,13 @@ public class MapActivity
     @Override
     public void onCameraChange(CameraPosition cameraPosition) {
         this.cameraPosition = cameraPosition;
+    }
+
+    @Override
+    public void onMapClick(LatLng latLng) {
+        if (marker != null) {
+            marker.remove();
+            marker = null;
+        }
     }
 }
