@@ -15,6 +15,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 
@@ -28,7 +29,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.ArrayList;
 
@@ -39,7 +43,9 @@ public class MapActivity
                    GoogleApiClient.OnConnectionFailedListener,
                    ConfirmationDialogFragment.ConfirmationDialogListener,
                    GoogleApiErrorDialogFragment.GoogleApiErrorDialogListener,
-                   LocationListener {
+                   LocationListener,
+                   GoogleMap.OnMapLongClickListener,
+                   GoogleMap.OnCameraChangeListener {
 
     private final static int RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE = 0;
     private final static int LOCATION_PERMISSION_REQUEST_CODE = 10;
@@ -57,6 +63,8 @@ public class MapActivity
     private GoogleApiClient googleApiClient;
     private GoogleMap map;
     private Location lastLocation;
+    private Marker marker;
+    private CameraPosition cameraPosition;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -264,15 +272,24 @@ public class MapActivity
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
-        map.setPadding(0,getSupportActionBar().getHeight(),0,0);
+        map.setPadding(0, getSupportActionBar().getHeight(), 0, 0);
         map.getUiSettings().setMyLocationButtonEnabled(false);
+        map.setOnMapLongClickListener(this);
+        map.setOnCameraChangeListener(this);
         requestLocationAction(ENABLE_MY_LOCATION_REQUEST_CODE, true);
-        requestLocationAction(ANIMATE_TO_MY_LOCATION_REQUEST_CODE, true);
+
+        if (cameraPosition == null) {
+            requestLocationAction(ANIMATE_TO_MY_LOCATION_REQUEST_CODE, true);
+        } else {
+            map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        }
     }
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-        requestLocationAction(ANIMATE_TO_MY_LOCATION_REQUEST_CODE, true);
+        if (cameraPosition == null) {
+            requestLocationAction(ANIMATE_TO_MY_LOCATION_REQUEST_CODE, true);
+        }
         requestLocationUpdates();
     }
 
@@ -287,8 +304,7 @@ public class MapActivity
             if (connectionResult.hasResolution()) {
                 try {
                     connectionResult.startResolutionForResult(
-                            this,
-                            RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE);
+                            this, RESOLVE_GOOGLE_API_ERROR_REQUEST_CODE);
                     isResolvingGoogleApiError = true;
                 } catch (IntentSender.SendIntentException e) {
                     e.printStackTrace();
@@ -341,5 +357,20 @@ public class MapActivity
     @Override
     public void onLocationChanged(Location location) {
         lastLocation = location;
+    }
+
+    @Override
+    public void onMapLongClick(LatLng latLng) {
+        if (marker == null) {
+            marker = map.addMarker(new MarkerOptions().position(latLng));
+        } else {
+            marker.setPosition(latLng);
+        }
+        map.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+    }
+
+    @Override
+    public void onCameraChange(CameraPosition cameraPosition) {
+        this.cameraPosition = cameraPosition;
     }
 }
